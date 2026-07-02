@@ -17,7 +17,7 @@ conn.commit()
 conn.close()
 
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 
 app = FastAPI()
 
@@ -54,3 +54,34 @@ def list_users():
     rows = conn.execute("SELECT * FROM users").fetchall()
     conn.close()
     return [dict(row) for row in rows]
+
+@app.get("/user/{user_id}")
+def get_id(user_id: int):
+    conn = get_db()
+    number_id = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    if number_id is None:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+    conn.close()
+    return dict(number_id)
+
+@app.delete("/user/{user_id}")
+def delete_user(user_id: int):
+    conn = get_db()
+    row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+    conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+    return {"сообщение": f"Пользователь {user_id} удален"}
+
+@app.put("/user/{user_id}")
+def update_user(user_id: int, user: User):
+    conn = get_db()
+    row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+    conn.execute("UPDATE users SET name = ?, age = ? WHERE id = ?", (user.name, user.age, user_id))
+    conn.commit()
+    conn.close()
+    return {"id": user_id, "name": user.name, "age": user.age}
