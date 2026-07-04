@@ -1,22 +1,6 @@
-import sqlite3
-
-def get_db():
-    conn = sqlite3.connect("users.db")
-    conn.row_factory = sqlite3.Row
-    return conn
-
-conn = get_db()
-conn.execute("""
-CREATE TABLE IF NOT EXISTS users(
-             id INTEGER PRIMARY KEY AUTOINCREMENT,
-             name TEXT NOT NULL,
-             age INTEGER NOT NULL
-)
-""")
-conn.commit()
-conn.close()
-
-
+from sqlalchemy.orm import Session
+from fastapi import Depends
+from database import get_db, UserModel
 from fastapi import FastAPI, HTTPException
 
 app = FastAPI()
@@ -41,47 +25,40 @@ class User(BaseModel):
     age: int
 
 @app.post("/user")
-def create_user(user: User):
-    conn = get_db()
-    conn.execute("INSERT INTO users (name, age) VALUES (?, ?)", (user.name, user.age))
-    conn.commit()
-    conn.close()
+def create_user(user: User, db: Session = Depends(get_db)):
+    db_user = UserModel(name=user.name, age=user.age)
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
     return {"сообщение": f"Пользователь {user.name}, {user.age} лет сохранен в базе"}
 
 @app.get("/users")
-def list_users():
-    conn = get_db()
-    rows = conn.execute("SELECT * FROM users").fetchall()
-    conn.close()
-    return [dict(row) for row in rows]
+def list_users(db: Session = Depends(get_db)):
+    users = db.query(UserModel).all()
+    return users
 
 @app.get("/user/{user_id}")
-def get_id(user_id: int):
-    conn = get_db()
-    number_id = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
-    if number_id is None:
+def get_id(user_id: int, db: Session = Depends((get_db))):
+    user = db.query(UserModel).filter(UserModel.id == user_id).first()
+    if user is None:
         raise HTTPException(status_code=404, detail="Пользователь не найден")
-    conn.close()
-    return dict(number_id)
+    return user
 
 @app.delete("/user/{user_id}")
-def delete_user(user_id: int):
-    conn = get_db()
-    row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
-    if row is None:
+def delete_user(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(UserModel).filter(UserModel.id == user_id).first()
+    if user is None:
         raise HTTPException(status_code=404, detail="Пользователь не найден")
-    conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
-    conn.commit()
-    conn.close()
+    db.delete(user)
+    db.commit()
     return {"сообщение": f"Пользователь {user_id} удален"}
 
 @app.put("/user/{user_id}")
-def update_user(user_id: int, user: User):
-    conn = get_db()
-    row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
-    if row is None:
+def update_user(user_id: int, user: User, db: Session = Depends(get_db)):
+    db_user = db.query(UserModel).filter(UserModel.id == user_id).first()
+    if db_user is None:
         raise HTTPException(status_code=404, detail="Пользователь не найден")
-    conn.execute("UPDATE users SET name = ?, age = ? WHERE id = ?", (user.name, user.age, user_id))
-    conn.commit()
-    conn.close()
-    return {"id": user_id, "name": user.name, "age": user.age}
+    db_user.name = user.name
+    db_user.age = user.age
+    db.commit()
+    return {"id": user_id, "name": user.name, "age": user.age}  
