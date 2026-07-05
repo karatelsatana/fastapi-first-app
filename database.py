@@ -1,3 +1,4 @@
+from pyparsing import nullDebugAction
 from sqlalchemy import create_engine, null
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy import Column, Integer, String
@@ -15,6 +16,7 @@ class UserModel(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     age = Column(Integer, nullable=False)
+    hashed_password = Column(String, nullable=False)
 
 def get_db():
     db = SessionLocal()
