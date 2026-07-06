@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from fastapi import Depends
-from database import get_db, UserModel
+from database import get_db, UserModel, NoteModel
 from fastapi import FastAPI, HTTPException
 from auth import hash_password, verify_password, create_access_token
 from auth import get_current_user
@@ -39,6 +39,17 @@ class UserOut(BaseModel): #Для скрытия пароля/токена
     id: int
     name: str
     age: int
+
+    class Config:
+        from_attributes = True
+
+class NoteCreate(BaseModel):
+    text: str
+
+class NoteOut(BaseModel):
+    id: int
+    text: str
+    owner_id: int
 
     class Config:
         from_attributes = True
@@ -103,3 +114,18 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     
     token = create_access_token({'sub': db_user.name})
     return {"access_token": token, "token_type": "bearer"}
+
+@app.post("/motes", response_model=NoteOut)
+def create_note(note: NoteCreate, db: Session = Depends(get_db), current_user: str = Depends(get_current_user)):
+    db_user = db.query(UserModel).filter(UserModel.name == current_user).first()
+    db_note = NoteModel(text=note.text, owner_id=db_user.id)
+    db.add(db_note)
+    db.commit()
+    db.refresh(db_note)
+    return db_note
+
+@app.get("/notes", response_model=list[NoteOut]) # возвр. заметки только того пользователя, чей токен сейчас вставлен в Swagger(Authorize)
+def list_notes(db: Session = Depends(get_db), current_user: str = Depends(get_current_user)):
+    db_user = db.query(UserModel).filter(UserModel.name == current_user).first()
+    notes = db.query(NoteModel).filter(NoteModel.owner_id == db_user.id).all()
+    return notes
