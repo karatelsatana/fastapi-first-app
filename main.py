@@ -115,7 +115,7 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     token = create_access_token({'sub': db_user.name})
     return {"access_token": token, "token_type": "bearer"}
 
-@app.post("/motes", response_model=NoteOut)
+@app.post("/notes", response_model=NoteOut)
 def create_note(note: NoteCreate, db: Session = Depends(get_db), current_user: str = Depends(get_current_user)):
     db_user = db.query(UserModel).filter(UserModel.name == current_user).first()
     db_note = NoteModel(text=note.text, owner_id=db_user.id)

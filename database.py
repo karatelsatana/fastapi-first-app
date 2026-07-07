@@ -3,8 +3,9 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy import Column, Integer, String
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
+import os
 
-DATABASE_URL = "postgresql://postgres:alisher2005@localhost/fastapi_app"
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:alisher2005@localhost/fastapi_app")
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
