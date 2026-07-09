@@ -17,27 +17,18 @@ FastAPI, SQLAlchemy, PostgreSQL, JWT (python-jose), bcrypt, Docker / docker-comp
 ## Run locally
 
 With Docker (recommended):
-
-\`\`\`bash
 docker compose up --build
-\`\`\`
 
 API available at `http://localhost:8000/docs`
 
 Without Docker:
-
-\`\`\`bash
 python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn main:app --reload
-\`\`\`
 
 ## Tests
-
-\`\`\`bash
 pytest
-\`\`\`
 
 ## Live demo
 
